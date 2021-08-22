@@ -1,7 +1,9 @@
 import './style.css'
+import { get, post } from './http'
 
 const form = document.querySelector('[data-js="cars-form"]')
 const table = document.querySelector('[data-js="table"]')
+
 const url = 'http://localhost:3333/cars'
 
 const getFormElement = (event) => (elementName) => {
@@ -40,7 +42,7 @@ function createColor(value) {
   return td
 }
 
-form.addEventListener('submit', (event) => {
+form.addEventListener('submit', async (event) => {
   event.preventDefault()
   const getElement = getFormElement(event)
 
@@ -52,11 +54,42 @@ form.addEventListener('submit', (event) => {
     color: getElement('color').value
   }
 
+  const result = await post(url, data)
+
+  if (result.error) {
+    callErrorToast(result.message)
+    return
+  }
+
+
+  const noContent = document.querySelector('[data-js="no-content"]')
+  if (noContent) {
+    table.removeChild(noContent)
+  }
+
   createTableRow(data)
 
   event.target.reset()
   image.focus()
 })
+
+function callErrorToast (message) {
+  const errorToastExist = document.querySelector('[data-js="toast"]')
+
+  if (!errorToastExist) {
+    const errorToast = document.createElement('div')
+    errorToast.dataset.js = 'toast'
+    errorToast.classList = 'toast'
+    errorToast.classList.add('-show')
+    errorToast.textContent = message
+    document.body.appendChild(errorToast)
+
+    setTimeout(() => {
+      errorToast.classList.remove('-show')
+      document.body.removeChild(errorToast)
+    }, 3000)
+  }
+}
 
 function createTableRow (data) {
   const elements = [
@@ -83,17 +116,15 @@ function createNoCarRow() {
   td.setAttribute('colspan', thsLength)
   td.textContent = 'Nenhum carro encontrado'
 
+  tr.dataset.js = 'no-content'
   tr.appendChild(td)
   table.appendChild(tr)
 }
 
 async function main () {
-  const result = await fetch(url)
-    .then(res => res.json())
-    .catch(err => ({ error: true, message: err.message }))
+  const result = await get(url)
 
   if (result.error) {
-    console.log(`Erro ao buscar carros ${result.message}`)
     return
   }
 
